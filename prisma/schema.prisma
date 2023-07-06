@@ -20,10 +20,10 @@ model Home {
   price Float
   land_size Float
   propertyType HouseType
-  images Image[]
   realtor_id Int
   realtor User @relation(fields: [realtor_id],references: [id])
-  messages Message[]
+  messages Message[] // specifies message table is link to this one
+  images Image[] // specifies images table is link to this one
 }
 
 model Image {
