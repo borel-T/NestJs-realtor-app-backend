@@ -1,8 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ParseIntPipe } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/service/service.module';
-import { HomeResponseDtos } from './dtos/home.dtos';
+import { CreateHomeDto, HomeResponseDtos } from './dtos/home.dtos';
 
-interface filterParams {
+interface FilterParams {
   city?: string;
   propertyType?: HouseType;
   price?: {
@@ -11,12 +11,23 @@ interface filterParams {
   };
 }
 
+interface CreateHomePayload {
+  address: string;
+  bedrooms: number;
+  bathrooms: number;
+  city: string;
+  price: number;
+  landSize: number;
+  propertyType: HouseType;
+  images: { url: string }[];
+}
+
 @Injectable()
 export class HomeService {
   constructor(private readonly prismaService: PrismaService) {}
 
   // returns a promise of type home-array
-  async getAll(filters: filterParams): Promise<HomeResponseDtos[]> {
+  async getAll(filters: FilterParams): Promise<HomeResponseDtos[]> {
     let homes = await this.prismaService.home.findMany({
       select: {
         id: true,
@@ -47,19 +58,47 @@ export class HomeService {
     return homes.map((home) => new HomeResponseDtos(home));
   }
 
-  async getByid(homeId: number) {
+  async getByid(homeId: number): Promise<HomeResponseDtos> {
     const home = await this.prismaService.home.findUnique({
       where: {
         id: homeId,
       },
     });
-    return home;
+    console.log(home);
+    return new HomeResponseDtos(home);
   }
 
-  async create() {
-    // find
-    // if found throw error
-    // if not found create
+  async create({
+    address,
+    city,
+    price,
+    propertyType,
+    bathrooms,
+    landSize,
+    bedrooms,
+    images,
+  }: CreateHomePayload) {
+    let home = await this.prismaService.home.create({
+      data: {
+        address,
+        city,
+        price,
+        propertyType,
+        bathrooms,
+        bedrooms,
+        land_size: landSize,
+        realtor_id: 1,
+      },
+    });
+
+    // makeup image list
+    const imgList = images.map((img) => ({ ...img, home_id: home.id }));
+    // save images
+    await this.prismaService.image.createMany({
+      data: imgList,
+    });
+
+    return new HomeResponseDtos(home);
   }
 
   update() {
